@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voyaverse - Single File Edition</title>
+    <!-- A-Frame and Extras -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
+    <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        :root {
+            --primary-color: #4a90d9; --secondary-color: #2c3e50;
+            --accent-color: #e63946; --success-color: #27ae60;
+            --text-primary: #ffffff; --text-secondary: #e0e0e0;
+            --bg-overlay: rgba(15, 15, 35, 0.7);
+            --panel-bg: rgba(26, 26, 46, 0.85); --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Inter', sans-serif; overflow: hidden; color: var(--text-primary); }
+        .hidden { display: none !important; }
+        button { cursor: pointer; font-family: inherit; transition: all 0.2s ease; }
+        
+        /* Main UI */
+        #main-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; align-items: center; padding-top: 50px; }
+        .header-content { background: var(--bg-overlay); backdrop-filter: blur(10px); padding: 20px 40px; border-radius: 20px; border: 1px solid var(--glass-border); text-align: center; }
+        .header-content h1 { margin: 0 0 10px 0; font-size: 2.5rem; background: linear-gradient(135deg, #FFD700, #4a90d9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-content p { font-size: 1.2rem; color: var(--text-secondary); margin: 0 0 15px 0;}
+        .instruction { font-size: 0.9rem; background: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 20px; display: inline-block; }
+        
+        /* Loading */
+        #loading-screen { position: absolute; top:0; left:0; width:100%; height:100%; background:#0f0f23; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; transition:opacity 0.5s;}
+        .loader { width:60px; height:60px; border:6px solid rgba(255,255,255,0.1); border-top:6px solid var(--primary-color); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:20px; }
+        @keyframes spin { 0% {transform:rotate(0deg);} 100% {transform:rotate(360deg);} }
+        
+        /* Panels */
+        .overlay-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 100; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.3s forwards; pointer-events: auto; }
+        .panel-inner { background: var(--panel-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 90%; max-width: 500px; position: relative; }
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: var(--text-secondary); }
+        .close-btn:hover { color: #fff; }
+        .panel-inner h3 { margin-top: 0; font-size: 1.8rem; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .primary-btn, .enter-btn { background: var(--primary-color); color: white; border: none; padding: 12px 24px; font-size: 1.1rem; border-radius: 8px; width: 100%; margin-top: 20px; }
+        .secondary-btn { background: rgba(255,255,255,0.1); color: white; border: none; padding: 12px 24px; font-size: 1.1rem; border-radius: 8px; width: 100%; margin-top: 20px; }
+        .panel-footer { display: flex; gap: 10px; }
+        
+        /* Country Header & Progress */
+        #country-ui { position: absolute; top: 20px; left: 20px; right: 20px; z-index: 50; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
+        #country-ui > * { pointer-events: auto; }
+        .back-btn { background: var(--bg-overlay); border: 1px solid var(--glass-border); color: white; padding: 10px 20px; border-radius: 30px; }
+        .country-header { background: var(--bg-overlay); padding: 15px 30px; border-radius: 12px; text-align: center; }
+        .country-header h2 { margin: 0 0 5px 0; }
+        #progress { background: var(--bg-overlay); padding: 12px 20px; border-radius: 12px; min-width: 200px; text-align:right;}
+        .progress-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin: 5px 0; overflow:hidden;}
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary-color), var(--success-color)); transition: width 0.5s; }
+        
+        /* Quiz Options */
+        .quiz-option { display: block; width: 100%; padding: 12px; margin-bottom: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px; text-align: left; }
+        .quiz-option.correct { background: rgba(39, 174, 96, 0.3); border-color: var(--success-color); }
+        .quiz-option.incorrect { background: rgba(230, 57, 70, 0.3); border-color: var(--accent-color); }
+
+        /* Guide */
+        #guide-dialog { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 60; pointer-events: auto; }
+        .dialog-content { background: var(--panel-bg); padding: 20px 30px; border-radius: 20px; display: flex; align-items: center; gap: 20px; min-width: 400px; }
+        .guide-avatar { font-size: 3rem; background: rgba(255,255,255,0.1); height: 60px; width: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .guide-text strong { color: var(--primary-color); font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+    <div id="loading-screen"><div class="loader"></div><p>Simulating World...</p></div>
+
+    <!-- MAIN MENU UI -->
+    <div id="main-ui">
+        <div class="header-content">
+            <h1>🌍 Voyaverse</h1>
+            <p>The world, experienced in advance.</p>
+            <p class="instruction">👁️ Look at a portal and click to travel</p>
+        </div>
+    </div>
+
+    <!-- COUNTRY UI -->
+    <div id="country-ui" class="hidden">
+        <button onclick="goHome()" class="back-btn">← Back to Hub</button>
+        <div class="country-header">
+            <h2 id="hud-title">Experience</h2>
+            <span class="subtitle" id="hud-subtitle">Welcome</span>
+        </div>
+        <div id="progress">
+            <div style="font-size:0.8rem;color:var(--text-secondary);text-align:left;">Progress</div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <span id="percent">0%</span>
+        </div>
+    </div>
+
+    <!-- Dynamic Panels -->
+    <div id="lesson-panel" class="overlay-panel hidden">
+        <div class="panel-inner">
+            <span class="close-btn" onclick="document.getElementById('lesson-panel').classList.add('hidden')">&times;</span>
+            <h3 id="lesson-title">Lesson</h3>
+            <div id="lesson-content"></div>
+            <div class="panel-footer">
+                <button onclick="document.getElementById('lesson-panel').classList.add('hidden')" class="secondary-btn">Close</button>
+                <button onclick="markComplete('lesson-panel')" class="primary-btn">Mark as Complete ✓</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="quiz-panel" class="overlay-panel hidden">
+        <div class="panel-inner">
+            <span class="close-btn" onclick="document.getElementById('quiz-panel').classList.add('hidden')">&times;</span>
+            <h3 id="quiz-title">🎯 Knowledge Quiz</h3>
+            <div id="quiz-content"></div>
+            <div id="quiz-result" class="hidden"></div>
+        </div>
+    </div>
+
+    <div id="guide-dialog" class="hidden">
+        <div class="dialog-content">
+            <div class="guide-avatar" id="guide-emoji">👋</div>
+            <div class="guide-text">
+                <strong id="guide-name">Guide</strong>
+                <p id="guide-message">Message</p>
+            </div>
+            <button class="primary-btn" onclick="document.getElementById('guide-dialog').classList.add('hidden')" style="margin-top:0;width:auto;">OK</button>
+        </div>
+    </div>
+
+    <!-- A-FRAME VR SCENE -->
+    <a-scene loading-screen="enabled: false" renderer="antialias: true; colorManagement: true">
+        
+        <a-assets>
+            <audio id="click-sound" src="https://cdn.aframe.io/basic-guide/audio/click.ogg" crossorigin="anonymous"></audio>
+        </a-assets>
+
+        <!-- Dynamic Environment -->
+        <a-sky id="world-sky" color="#1a1a2e"></a-sky>
+        <a-entity id="world-light-ambient" light="type: ambient; color: #BBB; intensity: 0.5"></a-entity>
+        <a-entity id="world-light-dir" light="type: directional; color: #FFF; intensity: 0.6" position="-0.5 1 1"></a-entity>
+        
+        <!-- Camera Rig -->
+        <a-entity id="camera-rig" position="0 0 0">
+            <a-entity id="camera" camera look-controls="pointerLockEnabled: false" wasd-controls="acceleration: 30" position="0 1.6 0">
+                <a-entity cursor="fuse: false" raycaster="objects: .clickable" position="0 0 -1" geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03" material="color: white; shader: flat" animation__click="property: scale; startEvents: click; from: 0.1 0.1 0.1; to: 1 1 1; dur: 150"></a-entity>
+            </a-entity>
+        </a-entity>
+
+        <!-- ================= MAIN MENU ================= -->
+        <a-entity id="group-hub" visible="true">
+            <a-entity particle-system="preset: dust; particleCount: 1000; color: #FFF, #FFD700; size: 0.5"></a-entity>
+            <a-circle rotation="-90 0 0" radius="50" color="#0f0f23" opacity="0.9"></a-circle>
+            <a-cylinder position="0 0.05 0" radius="8" height="0.1" color="#2d2d44"></a-cylinder>
+            
+            <a-text value="VOYAVERSE" align="center" position="0 5 -12" color="#FFD700" width="25" animation="property: position; to: 0 5.2 -12; dur: 2000; dir: alternate; loop: true"></a-text>
+
+            <!-- Japan Portal -->
+            <a-entity class="clickable portal" onclick="travelTo('japan')" position="-5 2 -10">
+                <a-torus radius="1.5" radius-tubular="0.08" color="#E63946"></a-torus>
+                <a-circle radius="1.4" color="#FFB7C5" opacity="0.6" material="side: double"></a-circle>
+                <a-entity position="0 -2 0">
+                    <a-plane width="2.5" height="0.8" color="#2C3E50" opacity="0.9"></a-plane>
+                    <a-text value="JAPAN" align="center" position="0 0.1 0.01" color="#FFF" width="4"></a-text>
+                </a-entity>
+            </a-entity>
+
+            <!-- France Portal -->
+            <a-entity class="clickable portal" onclick="travelTo('france')" position="0 2 -12">
+                <a-torus radius="1.5" radius-tubular="0.08" color="#0055A4"></a-torus>
+                <a-circle radius="1.4" color="#87CEEB" opacity="0.6" material="side: double"></a-circle>
+                <a-entity position="0 -2 0">
+                    <a-plane width="2.5" height="0.8" color="#2C3E50" opacity="0.9"></a-plane>
+                    <a-text value="FRANCE" align="center" position="0 0.1 0.01" color="#FFF" width="4"></a-text>
+                </a-entity>
+            </a-entity>
+
+            <!-- India Portal -->
+            <a-entity class="clickable portal" onclick="travelTo('india')" position="5 2 -10">
+                <a-torus radius="1.5" radius-tubular="0.08" color="#FF9933"></a-torus>
+                <a-circle radius="1.4" color="#FFD700" opacity="0.6" material="side: double"></a-circle>
+                <a-entity position="0 -2 0">
+                    <a-plane width="2.5" height="0.8" color="#2C3E50" opacity="0.9"></a-plane>
+                    <a-text value="INDIA" align="center" position="0 0.1 0.01" color="#FFF" width="4"></a-text>
+                </a-entity>
+            </a-entity>
+        </a-entity>
+
+        <!-- ================= JAPAN ================= -->
+        <a-entity id="group-japan" visible="false">
+            <a-plane rotation="-90 0 0" width="100" height="100" color="#4A5D23"></a-plane>
+            <!-- Torii Gate -->
+            <a-entity position="0 0 -15" scale="1.5 1.5 1.5">
+                <a-cylinder position="-3 3 0" radius="0.3" height="6" color="#C41E3A"></a-cylinder>
+                <a-cylinder position="3 3 0" radius="0.3" height="6" color="#C41E3A"></a-cylinder>
+                <a-box position="0 5.5 0" width="8" height="0.4" depth="0.5" color="#C41E3A"></a-box>
+                <a-box position="0 6.2 0" width="8.5" height="0.3" depth="0.6" color="#8b0000"></a-box>
+            </a-entity>
+            <!-- Guide -->
+            <a-entity class="clickable npc" position="3 0 -5" onclick="showGuide('Yuki', 'Konnichiwa! Welcome to Japan. Click the stations to learn!', '👘')">
+                <a-cylinder position="0 0.8 0" radius="0.3" height="1" color="#FFB7C5"></a-cylinder>
+                <a-sphere position="0 1.6 0" radius="0.25" color="#FFE0BD"></a-sphere>
+                <a-text value="Yuki" align="center" position="0 2.2 0" color="#333" width="2"></a-text>
+            </a-entity>
+            <!-- Stations -->
+            <a-entity class="clickable" position="-4 1.5 -8" onclick="openLesson('language')"><a-box color="#0055A4" width="2" height="1.5" depth="0.1"></a-box><a-text value="Language" position="0 0 0.1" align="center"></a-text></a-entity>
+            <a-entity class="clickable" position="4 1.5 -8" onclick="openLesson('culture')"><a-box color="#C41E3A" width="2" height="1.5" depth="0.1"></a-box><a-text value="Culture" position="0 0 0.1" align="center"></a-text></a-entity>
+            <a-entity class="clickable" position="0 1.5 -8" onclick="openQuiz()"><a-box color="#FFD700" width="2" height="1.5" depth="0.1"></a-box><a-text value="Quiz" position="0 0 0.1" align="center" color="#333"></a-text></a-entity>
+        </a-entity>
+
+        <!-- ================= FRANCE ================= -->
+        <a-entity id="group-france" visible="false">
+            <a-plane rotation="-90 0 0" width="100" height="100" color="#C4B7A6"></a-plane>
+            <!-- Eiffel Tower Base -->
+            <a-entity position="0 0 -20">
+                <a-box position="-3 2 -2" width="0.4" height="6" depth="0.4" color="#4A4A4A"></a-box>
+                <a-box position="3 2 -2" width="0.4" height="6" depth="0.4" color="#4A4A4A"></a-box>
+                <a-box position="-3 2 2" width="0.4" height="6" depth="0.4" color="#4A4A4A"></a-box>
+                <a-box position="3 2 2" width="0.4" height="6" depth="0.4" color="#4A4A4A"></a-box>
+                <a-box position="0 6 0" width="5" height="0.3" depth="5" color="#5A5A5A"></a-box>
+                <a-cylinder position="0 12 0" radius="0.5" height="6" color="#4A4A4A"></a-cylinder>
+            </a-entity>
+            <!-- Guide -->
+            <a-entity class="clickable npc" position="3 0 -5" onclick="showGuide('Marie', 'Bonjour! Discover the elegance of France by exploring the stations.', '👩‍🎨')">
+                <a-cylinder position="0 0.8 0" radius="0.3" height="1" color="#FFF"></a-cylinder>
+                <a-sphere position="0 1.6 0" radius="0.25" color="#FFDAB9"></a-sphere>
+                <a-text value="Marie" align="center" position="0 2.2 0" color="#333" width="2"></a-text>
+            </a-entity>
+            <!-- Stations -->
+            <a-entity class="clickable" position="-4 1.5 -8" onclick="openLesson('language')"><a-box color="#0055A4" width="2" height="1.5" depth="0.1"></a-box><a-text value="Language" position="0 0 0.1" align="center"></a-text></a-entity>
+            <a-entity class="clickable" position="4 1.5 -8" onclick="openLesson('culture')"><a-box color="#C41E3A" width="2" height="1.5" depth="0.1"></a-box><a-text value="Culture" position="0 0 0.1" align="center"></a-text></a-entity>
+            <a-entity class="clickable" position="0 1.5 -8" onclick="openQuiz()"><a-box color="#FFD700" width="2" height="1.5" depth="0.1"></a-box><a-text value="Quiz" position="0 0 0.1" align="center" color="#333"></a-text></a-entity>
+        </a-entity>
+
+        <!-- ================= INDIA ================= -->
+        <a-entity id="group-india" visible="false">
+            <a-plane rotation="-90 0 0" width="100" height="100" color="#D2B48C"></a-plane>
+            <!-- Taj Mahal Base -->
+            <a-entity position="0 0 -25">
+                <a-box position="0 4 0" width="10" height="6" depth="10" color="#FFFFFF"></a-box>
+                <a-sphere position="0 8 0" radius="3" color="#FFFFFF" theta-length="180"></a-sphere>
+                <a-cylinder position="-8 4 8" radius="0.6" height="8" color="#FFFFFF"></a-cylinder>
+                <a-cylinder position="8 4 8" radius="0.6" height="8" color="#FFFFFF"></a-cylinder>
+            </a-entity>
+            <a-plane position="0 0.1 -6" width="3" height="15" rotation="-90 0 0" color="#4A90D9"></a-plane>
+            <!-- Guide -->
+            <a-entity class="clickable npc" position="3 0 -5" onclick="showGuide('Raj', 'Namaste! Step into the incredible heritage of India right here.', '👳🏿‍♂️')">
+                <a-cylinder position="0 0.8 0" radius="0.32" height="1.2" color="#FFF8DC"></a-cylinder>
+                <a-sphere position="0 1.6 0" radius="0.22" color="#8B4513"></a-sphere>
+                <a-text value="Raj" align="center" position="0 2.2 0" color="#333" width="2"></a-text>
+            </a-entity>
+            <!-- Stations -->
+            <a-entity class="clickable" position="-4 1.5 -8" onclick="openLesson('language')"><a-box color="#FF9933" width="2" height="1.5" depth="0.1"></a-box><a-text value="Language" position="0 0 0.1" align="center"></a-text></a-entity>
+            <a-entity class="clickable" position="4 1.5 -8" onclick="openLesson('culture')"><a-box color="#138808" width="2" height="1.5" depth="0.1"></a-box><a-text value="Culture" position="0 0 0.1" align="center"></a-text></a-entity>
+            <a-entity class="clickable" position="0 1.5 -8" onclick="openQuiz()"><a-box color="#000080" width="2" height="1.5" depth="0.1"></a-box><a-text value="Quiz" position="0 0 0.1" align="center" color="#FFF"></a-text></a-entity>
+        </a-entity>
+
+    </a-scene>
+
+    <!-- JS LOGIC -->
+    <script>
+        const quizzes = {
+            japan: [
+                { q: "What is the traditional Japanese garment?", opts: ["Cheongsam", "Kimono", "Sari"], ans: 1 },
+                { q: "How do you say 'Hello' in Japanese?", opts: ["Konnichiwa", "Sayonara", "Arigato"], ans: 0 }
+            ],
+            france: [
+                { q: "Which monument is located in Paris?", opts: ["Colosseum", "Eiffel Tower", "Big Ben"], ans: 1 },
+                { q: "How do you say 'Hello' in French?", opts: ["Bonjour", "Merci", "Oui"], ans: 0 }
+            ],
+            india: [
+                { q: "Which mausoleum is located in Agra?", opts: ["Red Fort", "Taj Mahal", "Hawa Mahal"], ans: 1 },
+                { q: "How do you respectfully say 'Hello' in Hindi?", opts: ["Shukriya", "Alvida", "Namaste"], ans: 2 }
+            ]
+        };
+
+        const envs = {
+            hub:    { sky: '#1a1a2e', title: '', desc: '' },
+            japan:  { sky: '#FFB7C5', title: '🇯🇵 Japan Experience', desc: 'Welcome to Japan' },
+            france: { sky: '#87CEEB', title: '🇫🇷 France Experience', desc: 'Bienvenue en France' },
+            india:  { sky: '#FF9933', title: '🇮🇳 India Experience', desc: 'Welcome to India' }
+        };
+
+        let currentCountry = 'hub';
+        let progress = 0;
+        let activeQuestion = 0;
+
+        document.querySelector('a-scene').addEventListener('loaded', () => {
+            setTimeout(() => { document.getElementById('loading-screen').classList.add('hidden'); }, 1500);
+        });
+
+        function switchGroups(target) {
+            ['hub', 'japan', 'france', 'india'].forEach(id => {
+                document.getElementById('group-' + id).setAttribute('visible', id === target ? 'true' : 'false');
+            });
+            document.getElementById('world-sky').setAttribute('color', envs[target].sky);
+            
+            // UI Toggle
+            if(target === 'hub') {
+                document.getElementById('main-ui').classList.remove('hidden');
+                document.getElementById('country-ui').classList.add('hidden');
+            } else {
+                document.getElementById('main-ui').classList.add('hidden');
+                document.getElementById('country-ui').classList.remove('hidden');
+                document.getElementById('hud-title').innerText = envs[target].title;
+                document.getElementById('hud-subtitle').innerText = envs[target].desc;
+                progress = 0;
+                updateProgress();
+            }
+            currentCountry = target;
+        }
+
+        function travelTo(country) {
+            playClick();
+            document.getElementById('loading-screen').classList.remove('hidden');
+            setTimeout(() => {
+                switchGroups(country);
+                document.getElementById('loading-screen').classList.add('hidden');
+            }, 800);
+        }
+
+        function goHome() {
+            playClick();
+            travelTo('hub');
+        }
+
+        function playClick() {
+            const sfx = document.getElementById('click-sound');
+            if(sfx) sfx.play();
+        }
+
+        function openLesson(type) {
+            playClick();
+            const panel = document.getElementById('lesson-panel');
+            const title = document.getElementById('lesson-title');
+            const content = document.getElementById('lesson-content');
+
+            if(type === 'language') {
+                title.innerText = "🗣️ Language Lesson";
+                content.innerHTML = `<p>Master these essential phrases to navigate the region!</p>
+                <ul><li><strong>Greeting:</strong> People value a polite hello.</li><li><strong>Gratitude:</strong> Always say thank you.</li></ul>`;
+            } else {
+                title.innerText = "👘 Cultural Traditions";
+                content.innerHTML = `<p>Understand local customs to fit right in:</p>
+                <ul><li><strong>Respect:</strong> Always show respect for historical monuments.</li><li><strong>Attire:</strong> Dress appropriately.</li></ul>`;
+            }
+            panel.classList.remove('hidden');
+        }
+
+        function showGuide(name, msg, emoji) {
+            playClick();
+            document.getElementById('guide-name').innerText = name;
+            document.getElementById('guide-emoji').innerText = emoji;
+            document.getElementById('guide-message').innerText = msg;
+            document.getElementById('guide-dialog').classList.remove('hidden');
+        }
+
+        function openQuiz() {
+            playClick();
+            const qSet = quizzes[currentCountry];
+            activeQuestion = qSet[Math.floor(Math.random() * qSet.length)];
+            
+            document.getElementById('quiz-result').classList.add('hidden');
+            let html = `<p>${activeQuestion.q}</p><div>`;
+            activeQuestion.opts.forEach((opt, idx) => {
+                html += `<button class="quiz-option" onclick="submitAnswer(${idx}, this)">${opt}</button>`;
+            });
+            document.getElementById('quiz-content').innerHTML = html + "</div>";
+            document.getElementById('quiz-panel').classList.remove('hidden');
+        }
+
+        function submitAnswer(idx, btn) {
+            const result = document.getElementById('quiz-result');
+            const isCorrect = idx === activeQuestion.ans;
+            
+            document.querySelectorAll('.quiz-option').forEach(b => { b.style.pointerEvents = 'none'; });
+            
+            if(isCorrect) {
+                btn.classList.add('correct');
+                result.innerHTML = `<h4 style="color:var(--success-color)">✅ Correct!</h4>
+                                    <button class="primary-btn" onclick="markComplete('quiz-panel')">Claim Reward ✓</button>`;
+            } else {
+                btn.classList.add('incorrect');
+                result.innerHTML = `<h4 style="color:var(--accent-color)">❌ Incorrect.</h4>
+                                    <button class="secondary-btn" onclick="openQuiz()">Try Again</button>`;
+            }
+            result.classList.remove('hidden');
+        }
+
+        function markComplete(panelId) {
+            playClick();
+            document.getElementById(panelId).classList.add('hidden');
+            progress += 33.4;
+            updateProgress();
+        }
+
+        function updateProgress() {
+            let p = Math.min(Math.round(progress), 100);
+            document.getElementById('progress-fill').style.width = p + '%';
+            document.getElementById('percent').innerText = p + '%';
+        }
+    </script>
+</body>
+</html>
