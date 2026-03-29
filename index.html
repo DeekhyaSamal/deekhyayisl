@@ -1,117 +1,27 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
-    <title>Voyaverse | The World, Experienced in Advance</title>
+    <title>Voyaverse Quick-Start</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    
-    <style>
-      #overlay {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.8);
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        color: white;
-        font-family: sans-serif;
-      }
-      button {
-        padding: 15px 30px;
-        font-size: 20px;
-        background: #FFCC00;
-        border: none;
-        cursor: pointer;
-        border-radius: 5px;
-        font-weight: bold;
-      }
-    </style>
   </head>
   <body>
-
-    <div id="overlay">
-      <h1>VOYAVERSE</h1>
-      <p>The world, experienced in advance.</p>
-      <button onclick="startScene()">ENTER EXPERIENCE</button>
-    </div>
-
     <a-scene>
-      <a-assets>
-        <a-asset-item id="exoFont" src="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-asset-item>
-      </a-assets>
+      <a-sky color="#121212"></a-sky>
 
-      <a-sky material="shader: gradient; topColor: #121212; bottomColor: #4b0082;"></a-sky>
-      
-      <a-grid static-body material="opacity: 0.2; color: #00FFCC"></a-grid>
-
-      <a-entity position="0 0 0">
-        <a-camera>
-          <a-cursor fuse="true" fuse-timeout="1000" color="#FFCC00" scale="1.5 1.5 1.5"></a-cursor>
-        </a-camera>
+      <a-entity camera look-controls position="0 1.6 0">
+        <a-cursor color="white"></a-cursor>
       </a-entity>
 
-      <a-entity position="0 2 -4">
-        <a-plane width="4" height="2" color="#111" opacity="0.9" material="shader: flat"></a-plane>
-        
-        <a-text value="VOYAVERSE TRAINING" align="center" position="0 0.6 0.05" color="#FFCC00" width="6"></a-text>
-        
-        <a-text id="instruction-text" 
-                value="Focus your gaze on a floating node to learn the culture." 
-                align="center" position="0 0 0.05" width="4" color="#FFF"></a-text>
-                
-        <a-text id="fact-display" 
-                value="---" 
-                align="center" position="0 -0.5 0.05" width="3.5" color="#00FFCC"></a-text>
-      </a-entity>
+      <a-text id="main-text" value="VOYAVERSE: Look at a cube to learn." position="0 1.6 -2" align="center" width="3"></a-text>
 
-      <a-entity position="-2.5 1.5 -3" 
-                class="node"
-                animation="property: position; dir: alternate; dur: 2000; loop: true; to: -2.5 1.7 -3"
-                onclick="updateInfo('JAPANESE: Arigato', 'Pronounced: Ah-ree-gah-toh. It means Thank You. Use it often!')">
-        <a-sphere radius="0.3" color="#FF4B2B" opacity="0.8"></a-sphere>
-        <a-text value="LANGUAGE" align="center" position="0 0.5 0" width="3"></a-text>
-      </a-entity>
+      <a-box position="0 1 -2" rotation="0 45 0" color="#4CC3D9"
+             event-set__enter="_event: mouseenter; color: #FFCC00; scale: 1.2 1.2 1.2"
+             event-set__leave="_event: mouseleave; color: #4CC3D9; scale: 1 1 1"
+             onclick="document.getElementById('main-text').setAttribute('value', 'JAPAN: Konnichiwa means Hello!')">
+      </a-box>
 
-      <a-entity position="0 1.2 -2.5" 
-                class="node"
-                animation="property: rotation; dur: 5000; loop: true; to: 0 360 0"
-                onclick="updateInfo('ETIQUETTE: Shoes', 'In many cultures, especially Japan, you must remove shoes before entering a home.')">
-        <a-octahedron radius="0.3" color="#2BFFBD" opacity="0.8"></a-octahedron>
-        <a-text value="TRADITION" align="center" position="0 0.5 0" width="3"></a-text>
-      </a-entity>
-
-      <a-entity position="2.5 1.5 -3" 
-                class="node"
-                animation="property: scale; dir: alternate; dur: 1000; loop: true; to: 1.1 1.1 1.1"
-                onclick="updateInfo('GREETING: Bowing', 'The depth of your bow shows your level of respect. Start with 15 degrees.')">
-        <a-dodecahedron radius="0.3" color="#2B4BFF" opacity="0.8"></a-dodecahedron>
-        <a-text value="RESPECT" align="center" position="0 0.5 0" width="3"></a-text>
-      </a-entity>
+      <a-text value="Gaze here to learn" position="0 0.5 -2" align="center"></a-text>
 
     </a-scene>
-
-    <script>
-      // Function to start scene (removes overlay)
-      function startScene() {
-        document.getElementById('overlay').style.display = 'none';
-      }
-
-      // Function to update the UI text
-      function updateInfo(title, fact) {
-        document.querySelector('#instruction-text').setAttribute('value', title);
-        document.querySelector('#fact-display').setAttribute('value', fact);
-      }
-
-      // Automatically trigger update when gaze hovers
-      const nodes = document.querySelectorAll('.node');
-      nodes.forEach(node => {
-        node.addEventListener('mouseenter', () => {
-          // Manually trigger the onclick logic
-          node.onclick();
-        });
-      });
-    </script>
   </body>
 </html>
